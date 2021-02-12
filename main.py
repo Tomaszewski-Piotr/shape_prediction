@@ -42,7 +42,7 @@ print(out_cols)
 last = len(all_X)
 print(last)
 
-split = int(last * 0.95)
+split = int(last * 0.75)
 
 print(split)
 train_X = all_X[:split]
@@ -51,6 +51,19 @@ test_X = all_X[split:]
 test_y = all_y[split:]
 print(len(train_X))
 print(len(test_X))
+
+#normalise training data
+train_mean = train_X.mean()
+train_std = train_X.std()
+print(train_mean)
+print(train_std)
+
+
+
+train_X = (train_X - train_mean) / train_std
+test_X = (test_X - train_mean) / train_std
+print(train_X.head())
+print(test_X.head())
 
 
 # define the keras model
