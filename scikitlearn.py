@@ -52,6 +52,7 @@ else:
     neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
 
 neptune.create_experiment(name='shape_prediction')
-log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+#log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+log_classifier_summary(clf, X_train, X_test, y_train, y_test)
 neptune.stop()
 
