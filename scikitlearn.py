@@ -14,7 +14,7 @@ from neptunecontrib.monitoring.sklearn import log_classifier_summary
 # Connect your script to Neptune
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
-    neptune.create_experiment(name='shape_prediction', tags=['RandomForestRegressor', 'regression'])
+    neptune.create_experiment(name='shape_prediction')
 
 # load the dataset
 #read in data using pandas
@@ -33,11 +33,14 @@ X_train, X_test, y_train, y_test = train_test_split(all_X, all_y, test_size=0.2)
 # Random forest
 clf = RandomForestClassifier(n_estimators=64, random_state=0)
 clf.fit(X_train, y_train)
+
+if os.getenv('CI') == "true":
+    log_classifier_summary(clf, X_train, X_test, y_train, y_test)
+    neptune.stop()
+
 y_pred = clf.predict(X_test)
 print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
-if os.getenv('CI') == "true":
-    log_classifier_summary(clf, X_train, X_test, y_train, y_test)
-    neptune.stop()
+
 
