@@ -9,13 +9,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
-from neptunecontrib.monitoring.sklearn import log_classifier_summary
-
+from neptunecontrib.monitoring.sklearn import log_regressor_summary
 
 # Connect your script to Neptune
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
-    neptune.create_experiment(name='shape_prediction')
+    neptune.create_experiment(name='shape_prediction', tags=['RandomForestRegressor', 'regression'])
 
 # load the dataset
 #read in data using pandas
@@ -38,7 +37,7 @@ y_pred = clf.predict(X_test)
 print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
-
-log_regressor_summary(clf, X_train, X_test, y_train, y_test)
-
+if os.getenv('CI') == "true":
+    log_regressor_summary(clf, X_train, X_test, y_train, y_test)
+    neptune.stop()
 
