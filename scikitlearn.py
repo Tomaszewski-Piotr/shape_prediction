@@ -42,7 +42,10 @@ print(feature_imp)
 
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
-    neptune.create_experiment(name='shape_prediction')
-    log_confusion_matrix_chart(rfc, X_train, X_test, y_train, y_test)  # log confusion matrix chart
-    neptune.stop()
+else:
+    neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
+
+neptune.create_experiment(name='shape_prediction')
+log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+neptune.stop()
 
