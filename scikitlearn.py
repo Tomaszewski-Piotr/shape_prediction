@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
-from neptunecontrib.monitoring.sklearn import log_regressor_summary
+from neptunecontrib.monitoring.sklearn import log_classifier_summary
 
 # Connect your script to Neptune
 if os.getenv('CI') == "true":
@@ -38,6 +38,6 @@ print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
 if os.getenv('CI') == "true":
-    log_regressor_summary(clf, X_train, X_test, y_train, y_test)
+    log_classifier_summary(clf, X_train, X_test, y_train, y_test)
     neptune.stop()
 
