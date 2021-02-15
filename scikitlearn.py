@@ -10,6 +10,12 @@ from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
 from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
+from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+from neptunecontrib.monitoring.sklearn import log_class_prediction_error_chart
+from neptunecontrib.monitoring.sklearn import log_test_predictions
+
+
+
 from sklearn.metrics import multilabel_confusion_matrix
 
 # load the dataset
@@ -55,5 +61,6 @@ neptune.create_experiment(name='shape_prediction')
 log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
 log_class_prediction_error_chart(clf, X_train, X_test, y_train, y_test)
+log_test_predictions(clf, X_test, y_test, y_pred=y_pred)
 neptune.stop()
 
