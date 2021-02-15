@@ -11,7 +11,6 @@ import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
 from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
 from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
-from neptunecontrib.monitoring.sklearn import log_class_prediction_error_chart
 from neptunecontrib.monitoring.sklearn import log_test_predictions
 
 
@@ -45,7 +44,6 @@ clf.fit(X_train, y_train.values.ravel())
 y_pred = clf.predict(X_test)
 
 print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
-print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
 
@@ -60,7 +58,6 @@ else:
 neptune.create_experiment(name='shape_prediction')
 log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
-log_class_prediction_error_chart(clf, X_train, X_test, y_train, y_test)
 log_test_predictions(clf, X_test, y_test, y_pred=y_pred)
 neptune.stop()
 
