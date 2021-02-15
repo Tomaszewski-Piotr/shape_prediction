@@ -29,7 +29,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python main.py
+          python scikitlearn.py
           echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID        
 
       - name: Checkout main branch
@@ -42,7 +42,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python main.py
+          python scikitlearn.py
           echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID
 
           
