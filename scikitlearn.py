@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
-from neptunecontrib.monitoring.sklearn import log_classifier_summary
+from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
 
 
 # load the dataset
@@ -34,15 +34,15 @@ clf = RandomForestClassifier(**parameters)
 clf.fit(X_train, y_train)
 
 # Connect your script to Neptune
-if os.getenv('CI') == "true":
-    neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
-    neptune.create_experiment(name='shape_prediction')
-    log_classifier_summary(clf, X_train, X_test, y_train, y_test)
-    neptune.stop()
 
 y_pred = clf.predict(X_test)
 print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
 
+if os.getenv('CI') == "true":
+    neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
+    neptune.create_experiment(name='shape_prediction')
+    log_confusion_matrix_chart(rfc, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+    neptune.stop()
 
