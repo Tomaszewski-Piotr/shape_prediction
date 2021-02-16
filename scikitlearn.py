@@ -43,7 +43,7 @@ clf.fit(X_train, y_train.values.ravel())
 
 y_pred = clf.predict(X_test)
 
-print(y_pred.head())
+print(y_pred)
 
 accuracy = metrics.accuracy_score(y_test, y_pred)
 print("Random Forest Accuracy:",accuracy)
