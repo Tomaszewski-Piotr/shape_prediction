@@ -42,6 +42,9 @@ clf.fit(X_train, y_train.values.ravel())
 # Connect your script to Neptune
 
 y_pred = clf.predict(X_test)
+
+print(y_pred.head())
+
 accuracy = metrics.accuracy_score(y_test, y_pred)
 print("Random Forest Accuracy:",accuracy)
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
