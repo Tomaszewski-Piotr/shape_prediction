@@ -42,12 +42,12 @@ clf.fit(X_train, y_train.values.ravel())
 # Connect your script to Neptune
 
 y_pred = clf.predict(X_test)
-
-print("Random Forest Accuracy:",metrics.accuracy_score(y_test, y_pred))
+accuracy = metrics.accuracy_score(y_test, y_pred)
+neptune.log_metric('test accuracy', accuracy)
+print("Random Forest Accuracy:",accuracy)
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
 
-print('Piotr')
 print(multilabel_confusion_matrix(y_test, y_pred))
 
 if os.getenv('CI') == "true":
