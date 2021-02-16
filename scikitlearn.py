@@ -43,14 +43,18 @@ clf.fit(X_train, y_train.values.ravel())
 
 y_pred = clf.predict(X_test)
 
-print(y_pred)
+pred_result = y_test
+pred_result['prediction'] = y_pred
+prediction = pd.DataFrame(predictions).to_csv('prediction.csv')
+print(pred_result)
+
+pred_result.
 
 accuracy = metrics.accuracy_score(y_test, y_pred)
 print("Random Forest Accuracy:",accuracy)
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
 
-print(multilabel_confusion_matrix(y_test, y_pred))
 
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
@@ -62,5 +66,6 @@ neptune.log_metric('test accuracy', accuracy)
 log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
 log_scores(clf, X_test, y_test, name='test')
+neptune.log_artifact('prediction.csv')
 neptune.stop()
 
