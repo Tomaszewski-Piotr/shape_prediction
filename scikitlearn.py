@@ -43,7 +43,6 @@ clf.fit(X_train, y_train.values.ravel())
 
 y_pred = clf.predict(X_test)
 accuracy = metrics.accuracy_score(y_test, y_pred)
-neptune.log_metric('test accuracy', accuracy)
 print("Random Forest Accuracy:",accuracy)
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 print(feature_imp)
@@ -56,6 +55,7 @@ else:
     neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
 
 neptune.create_experiment(name='shape_prediction')
+neptune.log_metric('test accuracy', accuracy)
 log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
 log_scores(clf, X_test, y_test, name='test')
