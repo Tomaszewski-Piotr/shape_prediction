@@ -44,10 +44,11 @@ clf.fit(X_train, y_train.values.ravel())
 y_pred = clf.predict(X_test)
 accuracy = metrics.accuracy_score(y_test, y_pred)
 
-pred_result = y_test
-pred_result['prediction'] = y_pred
-pd.DataFrame(pred_result).to_csv('prediction.csv')
-print(pred_result)
+
+res = pd.DataFrame(y_pred)
+res.index = X_test.index # its important for comparison
+res.columns = ["prediction"]
+res.to_csv("prediction.csv")
 
 print("Random Forest Accuracy:",accuracy)
 feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
