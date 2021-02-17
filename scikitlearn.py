@@ -45,10 +45,9 @@ y_pred = clf.predict(X_test)
 
 pred_result = y_test
 pred_result['prediction'] = y_pred
-prediction = pd.DataFrame(predictions).to_csv('prediction.csv')
+pd.DataFrame(pred_result).to_csv('prediction.csv')
 print(pred_result)
 
-pred_result.
 
 accuracy = metrics.accuracy_score(y_test, y_pred)
 print("Random Forest Accuracy:",accuracy)
