@@ -37,18 +37,19 @@ jobs:
         with:
           ref: master
 
-      - name: Setup main branch environment and run experiment
-        id: experiment_main
-        run: |
-          pip3 install -r requirements.txt
-          export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python scikitlearn.py
-          echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID
+      #- name: Setup main branch environment and run experiment
+       # id: experiment_main
+       # run: |
+       #   pip3 install -r requirements.txt
+       #   export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
+       #   python scikitlearn.py
+       #   echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID
 
           
       - name: Get Neptune experiments
         env:
-          MAIN_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_main.outputs.experiment_tag_id }}
+          #MAIN_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_main.outputs.experiment_tag_id }}
+          MAIN_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_pr.outputs.experiment_tag_id }}
           PR_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_pr.outputs.experiment_tag_id }}
         id: compare
         run: |

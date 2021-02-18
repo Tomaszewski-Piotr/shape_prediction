@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
@@ -38,21 +39,35 @@ parameters = {'n_estimators': 120,
 
 clf = RandomForestClassifier(**parameters)
 clf.fit(X_train, y_train.values.ravel())
-
-# Connect your script to Neptune
-
-y_pred = clf.predict(X_test)
-accuracy = metrics.accuracy_score(y_test, y_pred)
+y_pred_RFC = clf.predict(X_test)
+accuracy_RFC = metrics.accuracy_score(y_test, y_pred_RFC)
 
 
-res = pd.DataFrame(y_pred)
-res.index = X_test.index # its important for comparison
-res.columns = ["prediction"]
-res.to_csv("prediction.csv")
+#res = pd.DataFrame(y_pred)
+#res.index = X_test.index # its important for comparison
+#res.columns = ["prediction"]
+#res.to_csv("prediction.csv")
+y_pred_all_RFC = clf.predict(all_X)
 
-print("Random Forest Accuracy:",accuracy)
-feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
-print(feature_imp)
+clf2 = KNeighborsClassifier(5)
+clf2.fit(X_train, y_train.values.ravel())
+y_pred_KNC = clf2.predict(X_test)
+accuracy_KNC = metrics.accuracy_score(y_test, y_pred_KNC)
+y_pred_all_KNC = clf2.predict(all_X)
+
+
+print('Piotr')
+print(y_pred_all_RFC)
+all_df['RFG'] = y_pred_all_RFC
+all_df['KNC'] = y_pred_all_KNC
+all_df.to_csv("predictions.csv")
+
+
+
+print("Random Forest Accuracy:",accuracy_RFC)
+print("KNC Accuracy:",accuracy_KNC)
+#feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
+#print(feature_imp)
 
 
 if os.getenv('CI') == "true":
@@ -61,10 +76,16 @@ else:
     neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
 
 neptune.create_experiment(name='shape_prediction')
-neptune.log_metric('test accuracy', accuracy)
+neptune.log_metric('Random Forest Accuracy', accuracy_RFC)
+neptune.log_metric('KNC Accuracy', accuracy_KNC)
+
 log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+log_confusion_matrix_chart(clf2, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
-log_scores(clf, X_test, y_test, name='test')
+log_precision_recall_chart(clf2, X_test, y_test)
+log_scores(clf, X_test, y_test, name='testRF')
+log_scores(clf2, X_test, y_test, name='testKN')
+
 neptune.log_artifact('prediction.csv')
 neptune.stop()
 
