@@ -10,9 +10,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
-#from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-#from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
-#from neptunecontrib.monitoring.sklearn import log_scores
+from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
+from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+from neptunecontrib.monitoring.sklearn import log_scores
 import zipfile
 import shutil
 
