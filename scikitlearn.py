@@ -10,11 +10,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
 from neptunecontrib.monitoring.keras import NeptuneMonitor
-from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
-from neptunecontrib.monitoring.sklearn import log_scores
-
-
+#from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
+#from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+#from neptunecontrib.monitoring.sklearn import log_scores
+import zipfile
+import shutil
 
 from sklearn.metrics import multilabel_confusion_matrix
 
@@ -62,6 +62,10 @@ all_df['RFG'] = y_pred_all_RFC
 all_df['KNC'] = y_pred_all_KNC
 all_df.to_csv("predictions.csv")
 
+inpath  = "predictions.csv"
+outpath = "predictions.zip"
+with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    zf.write(inpath, os.path.basename(inpath))
 
 
 print("Random Forest Accuracy:",accuracy_RFC)
@@ -86,6 +90,6 @@ log_precision_recall_chart(clf2, X_test, y_test)
 log_scores(clf, X_test, y_test, name='testRF')
 log_scores(clf2, X_test, y_test, name='testKN')
 
-neptune.log_artifact('prediction.csv')
+neptune.log_artifact('predictions.zip')
 neptune.stop()
 
