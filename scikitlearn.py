@@ -47,7 +47,7 @@ accuracy = metrics.accuracy_score(y_test, y_pred)
 
 res = pd.DataFrame(y_pred)
 res.index = X_test.index # its important for comparison
-res.columns = [X_test, "prediction"]
+res.columns = ["prediction"]
 res.to_csv("prediction.csv")
 
 print("Random Forest Accuracy:",accuracy)
