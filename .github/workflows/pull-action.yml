@@ -29,42 +29,14 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python scikitlearn.py
-          echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID        
+          python scikitlearn.py > log.txt
+          text=$(cat log.txt)
+          echo ::set-output name=url::$text
 
-      - name: Checkout main branch
-        uses: actions/checkout@v2
-        with:
-          ref: master
 
-      #- name: Setup main branch environment and run experiment
-       # id: experiment_main
-       # run: |
-       #   pip3 install -r requirements.txt
-       #   export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-       #   python scikitlearn.py
-       #   echo ::set-output name=experiment_tag_id::$NEPTUNE_EXPERIMENT_TAG_ID
-
-          
-      - name: Get Neptune experiments
-        env:
-          #MAIN_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_main.outputs.experiment_tag_id }}
-          MAIN_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_pr.outputs.experiment_tag_id }}
-          PR_BRANCH_EXPERIMENT_TAG_ID: ${{ steps.experiment_pr.outputs.experiment_tag_id }}
-        id: compare
-        run: |
-          pip install -r requirements.txt
-          python -m neptunecontrib.create_experiment_comparison_comment \
-            --api_token $NEPTUNE_API_TOKEN \
-            --project_name $NEPTUNE_PROJECT_NAME \
-            --tag_names $MAIN_BRANCH_EXPERIMENT_TAG_ID $PR_BRANCH_EXPERIMENT_TAG_ID  \
-            --filepath comment_body.md
-          result=$(cat comment_body.md)
-          echo ::set-output name=result::$result
-      
       - name: Create a comment
         uses: peter-evans/commit-comment@v1
         with:
           body: |
-            ${{ steps.compare.outputs.result }}
+            ${{ steps.experiment_pr.outputs.url }}
           

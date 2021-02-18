@@ -22,14 +22,11 @@ from sklearn.metrics import multilabel_confusion_matrix
 #read in data using pandas
 all_df = pd.read_csv('data.csv')
 #check data has been read in properly
-print(all_df.head())
 
 #create a dataframe with all training data except the target columns
 all_X = all_df.drop(columns=['ellipsoid', 'cylinder', 'sphere', 'shape'])
-print(all_X.head())
 #create a dataframe with only the target column
 all_y = all_df[['shape']]
-print(all_y.head())
 
 X_train, X_test, y_train, y_test = train_test_split(all_X, all_y, test_size=0.2) # 80% training and 20% test
 
@@ -56,8 +53,6 @@ accuracy_KNC = metrics.accuracy_score(y_test, y_pred_KNC)
 y_pred_all_KNC = clf2.predict(all_X)
 
 
-print('Piotr')
-print(y_pred_all_RFC)
 all_df['RFG'] = y_pred_all_RFC
 all_df['KNC'] = y_pred_all_KNC
 all_df.to_csv("predictions.csv")
@@ -87,8 +82,8 @@ log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusi
 log_confusion_matrix_chart(clf2, X_train, X_test, y_train, y_test)  # log confusion matrix chart
 log_precision_recall_chart(clf, X_test, y_test)
 log_precision_recall_chart(clf2, X_test, y_test)
-log_scores(clf, X_test, y_test, name='testRF')
-log_scores(clf2, X_test, y_test, name='testKN')
+#log_scores(clf, X_test, y_test, name='testRF')
+#log_scores(clf2, X_test, y_test, name='testKN')
 
 neptune.log_artifact('predictions.zip')
 neptune.stop()
