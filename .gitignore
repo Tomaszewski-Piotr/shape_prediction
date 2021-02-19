@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 *.h5
 predictions.csv
+predictions.zip
