@@ -9,10 +9,11 @@ from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import neptune
-from neptunecontrib.monitoring.keras import NeptuneMonitor
-from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
-from neptunecontrib.monitoring.sklearn import log_scores
+if os.getenv('CI') == "true":
+    from neptunecontrib.monitoring.keras import NeptuneMonitor
+    from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
+    from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+    from neptunecontrib.monitoring.sklearn import log_scores
 import zipfile
 import shutil
 
@@ -55,6 +56,8 @@ y_pred_all_KNC = clf2.predict(all_X)
 
 all_df['RFG'] = y_pred_all_RFC
 all_df['KNC'] = y_pred_all_KNC
+for i in X_test.index:
+    all_df.loc[i, 'test_set'] = "yes"
 all_df.to_csv("predictions.csv")
 
 inpath  = "predictions.csv"
@@ -63,8 +66,8 @@ with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
     zf.write(inpath, os.path.basename(inpath))
 
 
-print("Random Forest Accuracy:",accuracy_RFC)
-print("KNC Accuracy:",accuracy_KNC)
+print("Random Forest Accuracy:", accuracy_RFC, "\n")
+print("KNC Accuracy:", accuracy_KNC, "\n")
 #feature_imp = pd.Series(clf.feature_importances_).sort_values(ascending=False)
 #print(feature_imp)
 
@@ -72,7 +75,8 @@ print("KNC Accuracy:",accuracy_KNC)
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
 else:
-    neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
+#    neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
+     exit(0)
 
 neptune.create_experiment(name='shape_prediction')
 neptune.log_metric('Random Forest Accuracy', accuracy_RFC)
