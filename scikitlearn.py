@@ -53,7 +53,7 @@ y_pred = {}
 accuracy = {}
 
 for name, clf in zip(names, classifiers):
-   print(name)
+   print("Evaluating: ", name)
    clf.fit(X_train, y_train.values.ravel())
    y_pred[name] = clf.predict(X_test)
    accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
@@ -72,7 +72,7 @@ with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
 
 for name in names:
-    print(name, accuracy[name], "\n")
+    print(name,":", "{0:.0%}\n".format(accuracy[name]))
 
 
 if os.getenv('CI') == "true":
