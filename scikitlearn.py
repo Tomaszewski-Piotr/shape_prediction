@@ -18,7 +18,8 @@ if os.getenv('CI') == "true":
     from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
     from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
 import zipfile
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 # load the dataset
 #read in data using pandas
@@ -30,7 +31,34 @@ all_X = all_df.drop(columns=['ellipsoid', 'cylinder', 'sphere', 'shape'])
 #create a dataframe with only the target column
 all_y = all_df[['shape']]
 
-X_train, X_test, y_train, y_test = train_test_split(all_X, all_y, test_size=0.2) # 80% training and 20% test
+X_train, X_test_base, y_train, y_test = train_test_split(all_X, all_y, test_size=0.2) # 80% training and 20% test
+
+scaler = StandardScaler()
+
+# Fit on training set only.
+scaler.fit(X_train)
+# Apply transform to both the training set and the test set.
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test_base)
+all_X = scaler.transform(all_X)
+
+
+# Make an instance of the Model
+pca = PCA(0.95)
+pca.fit(X_train)
+
+print("PCA reduction to:", pca.n_components_, "components")
+#print(pca.n_samples_)
+#print(pca.components_)
+#print(pca.explained_variance_)
+#print(pca.explained_variance_ratio_)
+#print(len(pca.explained_variance_ratio_))
+
+#apply the PCA transform
+X_train = pca.transform(X_train)
+X_test = pca.transform(X_test)
+all_X = pca.transform(all_X)
+
 
 #Prepare classifiers
 names = ["Nearest Neighbors", 
@@ -60,7 +88,7 @@ for name, clf in zip(names, classifiers):
    all_df[name] = clf.predict(all_X)
 
 
-for i in X_test.index:
+for i in X_test_base.index:
     all_df.loc[i, 'test_set'] = "yes"
 
 all_df.to_csv("predictions.csv")
