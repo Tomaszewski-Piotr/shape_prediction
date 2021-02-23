@@ -30,7 +30,7 @@ jobs:
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
           python scikitlearn.py > log.txt
-          text=$(cat log.txt)
+          text=$(cat log.txt | grep -v Evaluating)
           echo ::set-output name=url::$text
 
 
