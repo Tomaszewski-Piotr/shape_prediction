@@ -20,6 +20,10 @@ if os.getenv('CI') == "true":
 import zipfile
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import numpy as np
+from sklearn.ensemble import StackingClassifier
+from sklearn.linear_model import LogisticRegression
+
 
 # load the dataset
 #read in data using pandas
@@ -51,12 +55,12 @@ print("PCA reduction to:", pca.n_components_, "components")
 #print(pca.n_samples_)
 #print(pca.components_)
 #print(pca.explained_variance_)
-#print(pca.explained_variance_ratio_)
+print(pca.explained_variance_ratio_)
 #print(len(pca.explained_variance_ratio_))
 
 #apply the PCA transform
-X_train = pca.transform(X_train)
-X_test = pca.transform(X_test)
+#X_train = pca.transform(X_train)
+#X_test = pca.transform(X_test)
 all_X = pca.transform(all_X)
 
 
@@ -65,34 +69,33 @@ names = ["Nearest Neighbors",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
          "Naive Bayes", "QDA"]
 # Random forest
-parameters = {'n_estimators': 120,
+parameters = {'n_estimators': 220,
               'random_state': 0}
 
 classifiers = [
-    KNeighborsClassifier(3),
-    DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(**parameters),
-    MLPClassifier(alpha=1, max_iter=1000),
-    AdaBoostClassifier(),
-    GaussianNB(),
-    QuadraticDiscriminantAnalysis()]
-
-y_pred = {}
-accuracy = {}
-
-for name, clf in zip(names, classifiers):
-   print("Evaluating: ", name)
-   clf.fit(X_train, y_train.values.ravel())
-   y_pred[name] = clf.predict(X_test)
-   accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
-   all_df[name] = clf.predict(all_X)
+    ('kN', KNeighborsClassifier(3)),
+    ('dtc', DecisionTreeClassifier(max_depth=7)),
+    ('rfc', RandomForestClassifier(**parameters)),
+    ('mlp', MLPClassifier(alpha=1, max_iter=2000)),
+    ('ada', AdaBoostClassifier()),
+    ('gnb', GaussianNB()),
+    ('qda', QuadraticDiscriminantAnalysis())]
 
 
+clf = StackingClassifier(estimators=classifiers, final_estimator=RidgeCV(max_iter=2000))
+clf.fit(X_train, y_train.values.ravel())
+y_pred = clf.predict(X_test)
+accuracy = metrics.accuracy_score(y_test, y_pred)
+#all_df['stacked'] = clf.predict(all_X)
+
+print(accuracy)
+
+exit(1)
 for i in X_test_base.index:
     all_df.loc[i, 'test_set'] = "yes"
 
 all_df.to_csv("predictions.csv")
-
+np.savetxt("pca.csv", all_X, delimiter=",")
 inpath  = "predictions.csv"
 outpath = "predictions.zip"
 with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
