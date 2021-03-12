@@ -82,6 +82,7 @@ classifiers = [
     ('gnb', GaussianNB()),
     ('qda', QuadraticDiscriminantAnalysis()),
     ('svc', SVC(gamma='auto')),
+    ('lin', LogisticRegression(max_iter = 3000))
 ]
 
 
