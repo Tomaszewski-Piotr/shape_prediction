@@ -25,14 +25,32 @@ import numpy as np
 from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import RidgeClassifier
+import pathlib
+import os
 
-# load the dataset
-#read in data using pandas
-all_df = pd.read_csv('data.csv')
-#check data has been read in properly
+
+# load the datasets
+data_path = 'data'
+data_suffix = '_Iq.csv'
+
+# concat contents off all data files
+content = []
+for txt_file in pathlib.Path(data_path).glob('*' + data_suffix):
+    filename = os.path.basename(txt_file)
+    print('Retrieving data from: ' + filename)
+    # read in data using pandas
+    shape = pd.read_csv(txt_file)
+    #add 'shape' column with shape name
+    shape['shape'] = filename[:-len(data_suffix)]
+    content.append(shape)
+
+all_df = pd.concat(content, axis=0, ignore_index=True)
+#call the first column 'id'
+all_df.rename(columns = {all_df.columns[0]: 'id'}, inplace = True)
 
 #create a dataframe with all training data except the target columns
-all_X = all_df.drop(columns=['ellipsoid', 'cylinder', 'sphere', 'shape'])
+all_X = all_df.drop(columns=['id', 'shape'])
+
 #create a dataframe with only the target column
 all_y = all_df[['shape']]
 
@@ -49,14 +67,14 @@ all_X = scaler.transform(all_X)
 
 
 # Make an instance of the Model
-pca = PCA(15)
+pca = PCA(25)
 pca.fit(X_train)
 
 print("PCA reduction to:", pca.n_components_, "components")
 #print(pca.n_samples_)
 #print(pca.components_)
 #print(pca.explained_variance_)
-print(pca.explained_variance_ratio_)
+#print(pca.explained_variance_ratio_)
 #print(len(pca.explained_variance_ratio_))
 
 #apply the PCA transform
@@ -74,27 +92,30 @@ parameters = {'n_estimators': 220,
               'random_state': 0}
 
 classifiers = [
-    ('kN', KNeighborsClassifier(3)),
-    ('dtc', DecisionTreeClassifier(max_depth=7)),
-    ('rfc', RandomForestClassifier(**parameters)),
-    ('mlp', MLPClassifier(alpha=1, max_iter=2000)),
-    ('ada', AdaBoostClassifier()),
-    ('gnb', GaussianNB()),
-    ('qda', QuadraticDiscriminantAnalysis()),
-    ('svc', SVC(gamma='auto')),
-    ('lin', LogisticRegression(max_iter = 3000))
+    ('KNeighborsClassifier', KNeighborsClassifier(3)),
+    ('DecisionTreeClassifier', DecisionTreeClassifier(max_depth=7)),
+    ('RandomForestClassifier', RandomForestClassifier(**parameters)),
+    ('MLPClassifier', MLPClassifier(alpha=1, max_iter=5000)),
+    ('AdaBoostClassifier', AdaBoostClassifier()),
+    ('GaussianNB', GaussianNB()),
+    ('QuadraticDiscriminantAnalysis', QuadraticDiscriminantAnalysis()),
+    ('SVC', SVC(gamma='auto')),
+    ('LogisticRegression', LogisticRegression(max_iter = 5000))
 ]
 
+classifiers.append(('Stacked', StackingClassifier(estimators=classifiers[:-1], final_estimator=LogisticRegression(max_iter = 5000))))
 
-clf = StackingClassifier(estimators=classifiers, final_estimator=LogisticRegression(max_iter = 3000))
-clf.fit(X_train, y_train.values.ravel())
-y_pred = clf.predict(X_test)
-accuracy = metrics.accuracy_score(y_test, y_pred)
-#all_df['stacked'] = clf.predict(all_X)
+y_pred = {}
+accuracy = {}
 
-print(accuracy)
+for name, clf in classifiers:
+    print("Evaluating: ", name)
+    clf.fit(X_train, y_train.values.ravel())
+    y_pred[name] = clf.predict(X_test)
+    accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
+    all_df[name] = clf.predict(all_X)
+    print(name, ":", "{0:.0%}\n".format(accuracy[name]))
 
-exit(1)
 for i in X_test_base.index:
     all_df.loc[i, 'test_set'] = "yes"
 
@@ -106,22 +127,18 @@ with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
     zf.write(inpath, os.path.basename(inpath))
 
 
-for name in names:
-    print(name,":", "{0:.0%}\n".format(accuracy[name]))
-
-
 if os.getenv('CI') == "true":
     neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
 else:
-#    neptune.init('shared/sklearn-integration', api_token='ANONYMOUS')
-     exit(0)
+    neptune.init(project_qualified_name='piotrt/shape-prediction', api_token=os.getenv('NEPTUNE_API_TOKEN'))
+
 
 neptune.create_experiment(name='shape_prediction')
-for name, clf in zip(names, classifiers):
+for name, clf in classifiers:
     neptune.log_metric(name, accuracy[name])
-    log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
-    log_precision_recall_chart(clf, X_test, y_test)
-
+    if os.getenv('CI') == "true":
+        log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
+        log_precision_recall_chart(clf, X_test, y_test)
 
 neptune.log_artifact('predictions.zip')
 neptune.stop()
