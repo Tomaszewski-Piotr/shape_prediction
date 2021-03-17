@@ -250,12 +250,13 @@ end_time = datetime.now()
 log_verbose('Execution duration: {}'.format(end_time - start_time))
 
 if results.upload:
-    log_verbose('Uploading results')
     if os.getenv('CI') == "true":
+        log_verbose('Uploading results from CI')
         neptune.init(api_token=os.getenv('NEPTUNE_API_TOKEN'), project_qualified_name=os.getenv('NEPTUNE_PROJECT_NAME'))
     else:
         token = os.getenv('NEPTUNE_API_TOKEN')
         if token:
+            log_verbose('Uploading results')
             neptune.init(project_qualified_name='piotrt/shape-prediction', api_token=os.getenv('NEPTUNE_API_TOKEN'))
         else:
             print('NEPTUNE_API_TOKEN must be specified in the shell')
