@@ -48,7 +48,7 @@ start_time = datetime.now()
 
 #parse input
 predefined_switches = [
-    ('--default', '-d', 'default_classifier', 'Run RandomForest and XGBClassifier (default choice)'),
+    ('--default', '-d', 'default_classifier', 'Run RandomForest and XGBClassifier'),
     ('--limited', '-l', 'limited_classifier', 'Run RandomForest, XGBClassifier, KNeighbors, NeuralNet '),
     ('--full', '-f', 'all_classifier', 'Run all classifiers (painfully slow and rather pointless)')]
 
