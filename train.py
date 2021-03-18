@@ -312,8 +312,13 @@ if results.upload:
     for name, clf in classifiers:
         neptune.log_metric(name, accuracy[name])
         if os.getenv('CI') == "true":
-            log_confusion_matrix_chart(clf, X_train, X_test, y_train, y_test)  # log confusion matrix chart
-            log_precision_recall_chart(clf, X_test, y_test)
+            if name in one_hot_encoded:
+                log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
+                log_precision_recall_chart(clf, X_test, y_test)
+            else:
+                log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
+                log_precision_recall_chart(clf, X_test, y_test)
+
     # zip results
     log_verbose("Zipping and uploading prediction file")
     inpath = "predictions.csv"
