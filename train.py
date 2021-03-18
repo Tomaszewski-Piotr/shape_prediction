@@ -325,6 +325,6 @@ if results.upload:
     outpath = "predictions.zip"
     with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.write(inpath, os.path.basename(inpath))
-    neptune.log_artifact('predictions.zip')
+    #neptune.log_artifact('predictions.zip')
     neptune.stop()
 
