@@ -41,6 +41,7 @@ from xgboost import XGBClassifier
 from xgboost import XGBRFClassifier
 from xgboost import XGBRFClassifier
 import math
+from sklearn.base import is_classifier
 
 
 #start time measurement
@@ -311,7 +312,7 @@ if results.upload:
     neptune.create_experiment(name='shape_prediction')
     for name, clf in classifiers:
         neptune.log_metric(name, accuracy[name])
-        if os.getenv('CI') == "true":
+        if os.getenv('CI') == "true" and is_classifier(clf):
             if name in one_hot_encoded:
                 log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
                 log_precision_recall_chart(clf, X_test, y_test)
