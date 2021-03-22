@@ -4,5 +4,6 @@ scikit-learn
 tensorflow
 keras
 numpy
+xgboost
 neptune-client
 neptune-contrib[monitoring]
