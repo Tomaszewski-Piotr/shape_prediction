@@ -42,7 +42,14 @@ from xgboost import XGBRFClassifier
 from xgboost import XGBRFClassifier
 import math
 from sklearn.base import is_classifier
-
+import matplotlib.pyplot as plt
+from sklearn.metrics import plot_confusion_matrix
+from PIL import Image
+from yellowbrick.classifier import ConfusionMatrix
+from sklearn.metrics import confusion_matrix
+import seaborn as sn
+import shutil
+from joblib import dump, load
 
 #start time measurement
 start_time = datetime.now()
@@ -71,6 +78,8 @@ algorithm_switches = [
 parser = argparse.ArgumentParser(description='Demo for various training shape recognition methods')
 parser.add_argument('--pca', '-p', action='store', dest='pca',
                     help='Perform PCA on input data. Values below 1 for explained variability, from 1 number of PCA components')
+parser.add_argument('--extended', action='store_true', default=False, dest='extended',
+                    help='Produces predictions for the complete data set')
 parser.add_argument('--verbose', '-v', action='store_true', default=False,
                     dest='verbose',
                     help='Set verbose mode')
@@ -98,6 +107,18 @@ def log_verbose(*args):
 
 # Just disables the warning, doesn't enable AVX/FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+#prepare output directory
+output_dir = 'output'
+log_verbose('\nResults will be placed in: ', output_dir)
+if os.path.isdir(output_dir):
+    log_verbose('\nCleaning output directory')
+    shutil.rmtree(output_dir)
+os.mkdir(output_dir);
+
+
+def output_file(filename):
+    return pathlib.Path(output_dir, filename)
 
 # load the datasets
 data_path = 'data'
@@ -137,6 +158,7 @@ ordinal_y = encoder.transform(all_y.values.ravel())
 # get one hot encoding
 one_hot_y = np_utils.to_categorical(ordinal_y)
 
+
 #split into test and train
 X_train, X_test_base, y_train, y_test, one_hot_y_train, one_hot_y_test, ordinal_y_train, ordinal_y_test = train_test_split(all_X, all_y, one_hot_y, ordinal_y, test_size=0.2) # 80% training and 20% test
 
@@ -161,7 +183,8 @@ if results.pca:
     # apply the PCA transform
     X_train = pca.transform(X_train)
     X_test = pca.transform(X_test)
-    all_X = pca.transform(all_X)
+    if results.extended:
+        all_X = pca.transform(all_X)
 
 
 #Prepare classifiers
@@ -265,33 +288,49 @@ for name, clf in classifiers:
 #list of classifiers where one hot encoding is required
 one_hot_encoded = ['NeuralNet']
 
-y_pred = {}
 accuracy = {}
 
 for name, clf in classifiers:
     log_verbose("\nEvaluating: ", name)
     train_start_time = datetime.now()
+    fig, ax = plt.subplots()
     if name in one_hot_encoded:
-        clf.fit(X_train, one_hot_y_train)
-    else:
-        clf.fit(X_train, ordinal_y_train)
 
+        clf.fit(X_train, one_hot_y_train)
+        y_pred = encoder.inverse_transform(clf.predict(X_test))
+        accuracy[name] = metrics.accuracy_score(y_test, y_pred)
+        c_m = confusion_matrix(y_test, y_pred, labels = encoder.classes_ )
+        df_cfm = pd.DataFrame(c_m, index=encoder.classes_ , columns=encoder.classes_ )
+        plt.figure(figsize=(10, 7))
+        cfm_plot = sn.heatmap(df_cfm, annot=True, fmt='d')
+        plt.savefig(output_file(name + ".png"))
+        plt.close(fig)
+    else:
+        cm = ConfusionMatrix(clf, encoder=encoder, is_fitted=False, ax=ax)
+        cm.fit(X_train, ordinal_y_train)
+        accuracy[name] = cm.score(X_test, ordinal_y_test)
+        cm.finalize()
+        plt.savefig(output_file(name + ".png"))
+        plt.close(fig)
+
+    dump(clf, output_file(name + ".joblib"))
     train_end_time = datetime.now()
-    y_pred[name] = encoder.inverse_transform(clf.predict(X_test))
-    accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
-    all_df[name] = encoder.inverse_transform(clf.predict(all_X))
+    #y_pred[name] = encoder.inverse_transform(clf.predict(X_test))
+    #accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
+    if results.extended:
+        all_df[name] = encoder.inverse_transform(clf.predict(all_X))
     print('', name, "accuracy:", "{0:.0%}".format(accuracy[name]))
     eval_end_time = datetime.now()
     log_verbose(' Training time: {}'.format(train_end_time - train_start_time))
     log_verbose(' Evaluation time: {}\n'.format(eval_end_time - train_end_time))
 
-
-for i in X_test_base.index:
-    all_df.loc[i, 'test_set'] = "yes"
-
-#save and zip the results file
-log_verbose('Saving predictions')
-all_df.to_csv("predictions.csv")
+# save the results file if required
+if results.extended:
+    for i in X_test_base.index:
+        all_df.loc[i, 'test_set'] = "yes"
+    #save the results file
+    log_verbose('Saving predictions')
+    all_df.to_csv(output_file("predictions.csv"))
 
 end_time = datetime.now()
 log_verbose('Total execution time: {}'.format(end_time - start_time))
@@ -309,9 +348,23 @@ if results.upload:
             print('NEPTUNE_API_TOKEN must be specified in the shell')
             exit(1)
 
+
+    def zip_it(in_file, out_file):
+        inpath = output_file(in_file)
+        outpath = output_file(out_file)
+        with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.write(inpath, os.path.basename(inpath))
+        #unix style required by naptune
+        return outpath.as_posix()
+
     neptune.create_experiment(name='shape_prediction')
     for name, clf in classifiers:
+        log_verbose('Uploading data for: ', name)
         neptune.log_metric(name, accuracy[name])
+        # Load image
+        image = Image.open(output_file(name+".png"))
+        neptune.log_image('Confusion matrices', image, image_name=name, description='Confusion matrix for '+name)
+
         if os.getenv('CI') == "true" and is_classifier(clf):
             if name in one_hot_encoded:
                 log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
@@ -319,13 +372,13 @@ if results.upload:
             else:
                 log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
                 log_precision_recall_chart(clf, X_test, y_test)
+        neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
-    # zip results
-    log_verbose("Zipping and uploading prediction file")
-    inpath = "predictions.csv"
-    outpath = "predictions.zip"
-    with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.write(inpath, os.path.basename(inpath))
-    #neptune.log_artifact('predictions.zip')
+
+    # if requested zip and add extended results
+    if results.extended:
+        log_verbose("Zipping and uploading complete prediction result file")
+        neptune.log_artifact(zip_it("predictions.csv", "predictions.zip"))
+
     neptune.stop()
 
