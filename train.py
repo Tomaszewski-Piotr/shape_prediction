@@ -1,4 +1,4 @@
-# first neural network with keras tutorial
+# Train shape recognition
 from numpy import loadtxt
 import os
 import pandas as pd
@@ -15,35 +15,27 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import neptune
-if os.getenv('CI') == "true":
-    from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-    from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+#if os.getenv('CI') == "true":
+#    from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
+#    from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
 import zipfile
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import numpy as np
 from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import RidgeClassifier
 import pathlib
 import os
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.preprocessing import LabelEncoder
 from keras.utils import np_utils
 from keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import KFold
-from sklearn.model_selection import cross_val_score
 import argparse
 from datetime import datetime
 from xgboost import XGBClassifier
 from xgboost import XGBRFClassifier
-from xgboost import XGBRFClassifier
-import math
-from sklearn.base import is_classifier
 import matplotlib.pyplot as plt
-from sklearn.metrics import plot_confusion_matrix
 from PIL import Image
 from yellowbrick.classifier import ConfusionMatrix
 from sklearn.metrics import confusion_matrix
@@ -307,6 +299,7 @@ for name, clf in classifiers:
         cfm_plot = sn.heatmap(df_cfm, annot=True, fmt='d')
         plt.savefig(output_file(name + ".png"))
         plt.close(fig)
+        #clf.save(output_file(name + ".joblib")) does not work not NN
     else:
         cm = ConfusionMatrix(clf, encoder=encoder, is_fitted=False, ax=ax)
         cm.fit(X_train, ordinal_y_train)
@@ -314,8 +307,8 @@ for name, clf in classifiers:
         cm.finalize()
         plt.savefig(output_file(name + ".png"))
         plt.close(fig)
+        dump(clf, output_file(name + ".joblib"))
 
-    dump(clf, output_file(name + ".joblib"))
     train_end_time = datetime.now()
     #y_pred[name] = encoder.inverse_transform(clf.predict(X_test))
     #accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
@@ -380,7 +373,9 @@ if results.upload:
         #    else:
         #        log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
         #        log_precision_recall_chart(clf, X_test, y_test)
-        neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
+        #can't save NN at the moment
+        if name not in one_hot_encoded:
+            neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
 
     # if requested zip and add extended results
