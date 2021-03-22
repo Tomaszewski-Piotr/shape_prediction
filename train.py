@@ -198,7 +198,7 @@ parameters = {'n_estimators': 220,
 
 # define the keras model for Neural Network
 #get number of columns and categories in training data
-train_cols = all_X.shape[1]
+train_cols = X_train.shape[1]
 no_categories = one_hot_y.shape[1]
 
 def baseline_model(train_cols, no_categories):
@@ -289,13 +289,15 @@ for name, clf in classifiers:
 one_hot_encoded = ['NeuralNet']
 
 accuracy = {}
+class_probability_names = []
+for class_name in encoder.classes_:
+    class_probability_names.append(class_name + '_prob')
 
 for name, clf in classifiers:
     log_verbose("\nEvaluating: ", name)
     train_start_time = datetime.now()
     fig, ax = plt.subplots()
     if name in one_hot_encoded:
-
         clf.fit(X_train, one_hot_y_train)
         y_pred = encoder.inverse_transform(clf.predict(X_test))
         accuracy[name] = metrics.accuracy_score(y_test, y_pred)
@@ -319,10 +321,16 @@ for name, clf in classifiers:
     #accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
     if results.extended:
         all_df[name] = encoder.inverse_transform(clf.predict(all_X))
+        prob = clf.predict_proba(all_X)
+        df_prob = pd.DataFrame(prob, columns=class_probability_names)
+        for current_prob in class_probability_names:
+            all_df[current_prob+'_'+name] = df_prob[current_prob].values
+
     print('', name, "accuracy:", "{0:.0%}".format(accuracy[name]))
     eval_end_time = datetime.now()
     log_verbose(' Training time: {}'.format(train_end_time - train_start_time))
     log_verbose(' Evaluation time: {}\n'.format(eval_end_time - train_end_time))
+
 
 # save the results file if required
 if results.extended:
