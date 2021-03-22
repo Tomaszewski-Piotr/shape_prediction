@@ -365,13 +365,13 @@ if results.upload:
         image = Image.open(output_file(name+".png"))
         neptune.log_image('Confusion matrices', image, image_name=name, description='Confusion matrix for '+name)
 
-        if os.getenv('CI') == "true" and is_classifier(clf):
-            if name in one_hot_encoded:
-                log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
-                log_precision_recall_chart(clf, X_test, y_test)
-            else:
-                log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
-                log_precision_recall_chart(clf, X_test, y_test)
+        #if os.getenv('CI') == "true" and is_classifier(clf):
+        #    if name in one_hot_encoded:
+        #        log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
+        #        log_precision_recall_chart(clf, X_test, y_test)
+        #    else:
+        #        log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
+        #        log_precision_recall_chart(clf, X_test, y_test)
         neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
 
