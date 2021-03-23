@@ -78,6 +78,10 @@ parser.add_argument('--verbose', '-v', action='store_true', default=False,
 parser.add_argument('--upload', '-u', action='store_true', default=False,
                     dest='upload',
                     help='Upload results to Neptune, NEPTUNE_API_TOKEN must be set in the shell')
+parser.add_argument('--from', action='store', dest='start', default=0,
+                    help='specify subset of features to be used for training, start point <0,499>')
+parser.add_argument('--to', action='store', dest='end', default=499,
+                    help='specify subset of features to be used for training, end point <0,499>')
 group = parser.add_mutually_exclusive_group()
 for item in predefined_switches:
     group.add_argument(item[0], item[1], action='store_true', dest=item[2], help=item[3])
@@ -136,6 +140,10 @@ all_df.rename(columns = {all_df.columns[0]: 'id'}, inplace = True)
 #create a dataframe with all training data except the target columns
 all_X = all_df.drop(columns=['id', 'shape'])
 
+#remove subset if required
+log_verbose(' Using features from position: ' + results.start + ' to position ' + results.end)
+all_X.drop(all_X.iloc[:, int(results.end)+1:], inplace = True, axis = 1)
+all_X.drop(all_X.iloc[:, 0:int(results.start)], inplace = True, axis = 1)
 
 #create a dataframe with only the target column
 all_y = all_df[['shape']]
