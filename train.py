@@ -42,6 +42,9 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import shutil
 from joblib import dump, load
+from common import log_verbose
+import common
+
 
 #start time measurement
 start_time = datetime.now()
@@ -96,16 +99,16 @@ parser.add_argument('--stacked', '-s', action='store_true', default=False,
 results = parser.parse_args()
 
 
-def log_verbose(*args):
-    if results.verbose:
-        print(*args)
+#def log_verbose(*args):
+#    if results.verbose:
+#        print(*args)
 
 
 # Just disables the warning, doesn't enable AVX/FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 #prepare output directory
-output_dir = 'output'
+output_dir = common.model_dir
 log_verbose('\nResults will be placed in: ', output_dir)
 if os.path.isdir(output_dir):
     log_verbose('\nCleaning output directory')
@@ -113,18 +116,14 @@ if os.path.isdir(output_dir):
 os.mkdir(output_dir);
 
 
-def output_file(filename):
-    return pathlib.Path(output_dir, filename)
-
-# load the datasets
-data_path = 'data'
-data_suffix = '_Iq.csv'
+#def output_file(filename):
+#    return pathlib.Path(output_dir, filename)
 
 # concat contents off all data files
 log_verbose('\nPreparing data')
 
 content = []
-for txt_file in pathlib.Path(data_path).glob('*' + data_suffix):
+for txt_file in get_data_files():
     filename = os.path.basename(txt_file)
     log_verbose(' Retrieving data from: ' + filename)
     # read in data using pandas
@@ -141,7 +140,7 @@ all_df.rename(columns = {all_df.columns[0]: 'id'}, inplace = True)
 all_X = all_df.drop(columns=['id', 'shape'])
 
 #remove subset if required
-log_verbose(' Using features from position: ' + results.start + ' to position ' + results.end)
+log_verbose(' Using features from position: ' + str(results.start) + ' to position ' + str(results.end))
 all_X.drop(all_X.iloc[:, int(results.end)+1:], inplace = True, axis = 1)
 all_X.drop(all_X.iloc[:, 0:int(results.start)], inplace = True, axis = 1)
 
@@ -158,6 +157,8 @@ ordinal_y = encoder.transform(all_y.values.ravel())
 # get one hot encoding
 one_hot_y = np_utils.to_categorical(ordinal_y)
 
+#save classes to the file
+np.save(output_file('classes.npy'), encoder.classes_)
 
 #split into test and train
 X_train, X_test_base, y_train, y_test, one_hot_y_train, one_hot_y_test, ordinal_y_train, ordinal_y_test = train_test_split(all_X, all_y, one_hot_y, ordinal_y, test_size=0.2) # 80% training and 20% test
@@ -169,6 +170,8 @@ scaler.fit(X_train)
 X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test_base)
 all_X = scaler.transform(all_X)
+#save the scaler
+dump(scaler, output_file('std_scaler.bin'), compress=True)
 
 # Check if PCA should be done
 if results.pca:
@@ -177,6 +180,7 @@ if results.pca:
         pca_parameter = int(pca_parameter);
     pca = PCA(pca_parameter)
     pca.fit(X_train)
+    dump(pca, output_file('pca.bin'), compress=True)
     log_verbose("\nPCA reduction:")
     log_verbose(" Number of selected components: ", pca.n_components_)
     log_verbose(" Explained variance: {0:.0%}".format(pca.explained_variance_ratio_.sum()))
