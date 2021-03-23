@@ -15,16 +15,12 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import neptune
-#if os.getenv('CI') == "true":
-#    from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-#    from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+
 import zipfile
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-import numpy as np
 from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
-import pathlib
 import os
 from keras.models import Sequential
 from keras.layers import Dense
@@ -98,11 +94,7 @@ parser.add_argument('--stacked', '-s', action='store_true', default=False,
                     help='Additionally run selected classifiers stacked')
 results = parser.parse_args()
 
-
-#def log_verbose(*args):
-#    if results.verbose:
-#        print(*args)
-
+common.verbose = results.verbose
 
 # Just disables the warning, doesn't enable AVX/FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -110,31 +102,27 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #prepare output directory
 output_dir = common.model_dir
 log_verbose('\nResults will be placed in: ', output_dir)
+
 if os.path.isdir(output_dir):
     log_verbose('\nCleaning output directory')
     shutil.rmtree(output_dir)
 os.mkdir(output_dir);
 
-
-#def output_file(filename):
-#    return pathlib.Path(output_dir, filename)
-
 # concat contents off all data files
 log_verbose('\nPreparing data')
 
 content = []
-for txt_file in get_data_files():
+for txt_file in common.get_data_files():
     filename = os.path.basename(txt_file)
     log_verbose(' Retrieving data from: ' + filename)
-    # read in data using pandas
-    shape = pd.read_csv(txt_file)
+    # read in data
+    shape = common.preprocess_input_file(txt_file)
     #add 'shape' column with shape name
-    shape['shape'] = filename[:-len(data_suffix)]
+    shape['shape'] = filename[:-len(common.data_suffix)]
     content.append(shape)
 
 all_df = pd.concat(content, axis=0, ignore_index=True)
-#call the first column 'id'
-all_df.rename(columns = {all_df.columns[0]: 'id'}, inplace = True)
+
 
 #create a dataframe with all training data except the target columns
 all_X = all_df.drop(columns=['id', 'shape'])
@@ -158,7 +146,7 @@ ordinal_y = encoder.transform(all_y.values.ravel())
 one_hot_y = np_utils.to_categorical(ordinal_y)
 
 #save classes to the file
-np.save(output_file('classes.npy'), encoder.classes_)
+common.save_encoder(encoder)
 
 #split into test and train
 X_train, X_test_base, y_train, y_test, one_hot_y_train, one_hot_y_test, ordinal_y_train, ordinal_y_test = train_test_split(all_X, all_y, one_hot_y, ordinal_y, test_size=0.2) # 80% training and 20% test
@@ -171,7 +159,7 @@ X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test_base)
 all_X = scaler.transform(all_X)
 #save the scaler
-dump(scaler, output_file('std_scaler.bin'), compress=True)
+common.save_scaler(scaler)
 
 # Check if PCA should be done
 if results.pca:
@@ -180,7 +168,7 @@ if results.pca:
         pca_parameter = int(pca_parameter);
     pca = PCA(pca_parameter)
     pca.fit(X_train)
-    dump(pca, output_file('pca.bin'), compress=True)
+    common.save_pca(pca)
     log_verbose("\nPCA reduction:")
     log_verbose(" Number of selected components: ", pca.n_components_)
     log_verbose(" Explained variance: {0:.0%}".format(pca.explained_variance_ratio_.sum()))
@@ -191,10 +179,6 @@ if results.pca:
         all_X = pca.transform(all_X)
 
 
-#Prepare classifiers
-names = ["Nearest Neighbors", 
-         "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
-         "Naive Bayes", "QDA"]
 # Random forest
 parameters = {'n_estimators': 220,
               'random_state': 0}
@@ -309,7 +293,7 @@ for name, clf in classifiers:
         df_cfm = pd.DataFrame(c_m, index=encoder.classes_ , columns=encoder.classes_ )
         plt.figure(figsize=(10, 7))
         cfm_plot = sn.heatmap(df_cfm, annot=True, fmt='d')
-        plt.savefig(output_file(name + ".png"))
+        plt.savefig(common.model_file(name + ".png"))
         plt.close(fig)
         #clf.save(output_file(name + ".joblib")) does not work not NN
     else:
@@ -317,19 +301,15 @@ for name, clf in classifiers:
         cm.fit(X_train, ordinal_y_train)
         accuracy[name] = cm.score(X_test, ordinal_y_test)
         cm.finalize()
-        plt.savefig(output_file(name + ".png"))
+        plt.savefig(common.model_file(name + ".png"))
         plt.close(fig)
-        dump(clf, output_file(name + ".joblib"))
+        dump(clf, common.model_file(name + ".joblib"))
 
     train_end_time = datetime.now()
-    #y_pred[name] = encoder.inverse_transform(clf.predict(X_test))
-    #accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
+
     if results.extended:
-        all_df[name] = encoder.inverse_transform(clf.predict(all_X))
-        prob = clf.predict_proba(all_X)
-        df_prob = pd.DataFrame(prob, columns=class_probability_names)
-        for current_prob in class_probability_names:
-            all_df[current_prob+'_'+name] = df_prob[current_prob].values
+        all_df = common.append_predictions(clf, all_X, name, all_df)
+
 
     print('', name, "accuracy:", "{0:.0%}".format(accuracy[name]))
     eval_end_time = datetime.now()
@@ -343,7 +323,7 @@ if results.extended:
         all_df.loc[i, 'test_set'] = "yes"
     #save the results file
     log_verbose('Saving predictions')
-    all_df.to_csv(output_file("predictions.csv"))
+    all_df.to_csv(common.model_file("predictions.csv"))
 
 end_time = datetime.now()
 log_verbose('Total execution time: {}'.format(end_time - start_time))
@@ -363,8 +343,8 @@ if results.upload:
 
 
     def zip_it(in_file, out_file):
-        inpath = output_file(in_file)
-        outpath = output_file(out_file)
+        inpath = common.model_file(in_file)
+        outpath = common.model_file(out_file)
         with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.write(inpath, os.path.basename(inpath))
         #unix style required by naptune
@@ -375,20 +355,17 @@ if results.upload:
         log_verbose('Uploading data for: ', name)
         neptune.log_metric(name, accuracy[name])
         # Load image
-        image = Image.open(output_file(name+".png"))
+        image = Image.open(common.model_file(name+".png"))
         neptune.log_image('Confusion matrices', image, image_name=name, description='Confusion matrix for '+name)
 
-        #if os.getenv('CI') == "true" and is_classifier(clf):
-        #    if name in one_hot_encoded:
-        #        log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
-        #        log_precision_recall_chart(clf, X_test, y_test)
-        #    else:
-        #        log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
-        #        log_precision_recall_chart(clf, X_test, y_test)
         #can't save NN at the moment
         if name not in one_hot_encoded:
             neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
+        neptune.log_artifact(common.scaler_file.as_posix())
+        neptune.log_artifact(common.class_name_file.as_posix())
+        if results.pca:
+            neptune.log_artifact(common.pca_file.as_posix())
 
     # if requested zip and add extended results
     if results.extended:
