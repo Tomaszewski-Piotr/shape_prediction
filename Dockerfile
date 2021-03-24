@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 ADD *.py /app
-COPY models /app/models
+ADD models /app/models
 ADD requirements_deploy.txt /app
 
 # Install any needed packages specified in requirements_deploy.txt
