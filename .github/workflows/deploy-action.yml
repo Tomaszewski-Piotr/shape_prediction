@@ -26,8 +26,6 @@ jobs:
   
       - name: Checkout main branch
         uses: actions/checkout@v2
-        with:
-          ref: master
 
       - name: Setup main branch environment and run experiment to get reference and model file
         id: experiment_main
@@ -42,6 +40,8 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v1
         with:
+          context: .
+          push: true
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: piotrtomaszewski/shape_prediction
