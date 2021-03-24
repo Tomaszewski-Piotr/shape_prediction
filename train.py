@@ -1,4 +1,4 @@
-# first neural network with keras tutorial
+# Train shape recognition
 from numpy import loadtxt
 import os
 import pandas as pd
@@ -15,41 +15,32 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import neptune
-if os.getenv('CI') == "true":
-    from neptunecontrib.monitoring.sklearn import log_confusion_matrix_chart
-    from neptunecontrib.monitoring.sklearn import log_precision_recall_chart
+
 import zipfile
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-import numpy as np
 from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import RidgeClassifier
-import pathlib
 import os
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.preprocessing import LabelEncoder
 from keras.utils import np_utils
 from keras.wrappers.scikit_learn import KerasClassifier
-from sklearn.model_selection import KFold
-from sklearn.model_selection import cross_val_score
 import argparse
 from datetime import datetime
 from xgboost import XGBClassifier
 from xgboost import XGBRFClassifier
-from xgboost import XGBRFClassifier
-import math
-from sklearn.base import is_classifier
 import matplotlib.pyplot as plt
-from sklearn.metrics import plot_confusion_matrix
 from PIL import Image
 from yellowbrick.classifier import ConfusionMatrix
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import shutil
 from joblib import dump, load
+from common import log_verbose
+import common
+
 
 #start time measurement
 start_time = datetime.now()
@@ -86,6 +77,11 @@ parser.add_argument('--verbose', '-v', action='store_true', default=False,
 parser.add_argument('--upload', '-u', action='store_true', default=False,
                     dest='upload',
                     help='Upload results to Neptune, NEPTUNE_API_TOKEN must be set in the shell')
+parser.add_argument('--from', action='store', dest='start', default=0,
+                    help='specify subset of features to be used for training, start point <0,499>')
+parser.add_argument('--to', action='store', dest='end', default=499,
+                    help='specify subset of features to be used for training, end point <0,499>')
+parser.add_argument('--tag', action='store', dest='tag', help='Identifier for trained model. If not specified the default will be replaced')
 group = parser.add_mutually_exclusive_group()
 for item in predefined_switches:
     group.add_argument(item[0], item[1], action='store_true', dest=item[2], help=item[3])
@@ -99,51 +95,50 @@ parser.add_argument('--stacked', '-s', action='store_true', default=False,
                     help='Additionally run selected classifiers stacked')
 results = parser.parse_args()
 
-
-def log_verbose(*args):
-    if results.verbose:
-        print(*args)
-
+# pass relevant settings to the common lib
+common.verbose = results.verbose
+if results.tag:
+    common.tag = results.tag
 
 # Just disables the warning, doesn't enable AVX/FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 #prepare output directory
-output_dir = 'output'
+output_dir = common.model_directory()
 log_verbose('\nResults will be placed in: ', output_dir)
+
 if os.path.isdir(output_dir):
     log_verbose('\nCleaning output directory')
     shutil.rmtree(output_dir)
-os.mkdir(output_dir);
 
+if not os.path.isdir(common.model_dir):
+    os.mkdir(common.model_dir)
 
-def output_file(filename):
-    return pathlib.Path(output_dir, filename)
-
-# load the datasets
-data_path = 'data'
-data_suffix = '_Iq.csv'
+os.mkdir(output_dir)
 
 # concat contents off all data files
 log_verbose('\nPreparing data')
 
 content = []
-for txt_file in pathlib.Path(data_path).glob('*' + data_suffix):
+for txt_file in common.get_data_files():
     filename = os.path.basename(txt_file)
     log_verbose(' Retrieving data from: ' + filename)
-    # read in data using pandas
-    shape = pd.read_csv(txt_file)
+    # read in data
+    shape = common.preprocess_input_file(txt_file)
     #add 'shape' column with shape name
-    shape['shape'] = filename[:-len(data_suffix)]
+    shape['shape'] = filename[:-len(common.data_suffix)]
     content.append(shape)
 
 all_df = pd.concat(content, axis=0, ignore_index=True)
-#call the first column 'id'
-all_df.rename(columns = {all_df.columns[0]: 'id'}, inplace = True)
+
 
 #create a dataframe with all training data except the target columns
 all_X = all_df.drop(columns=['id', 'shape'])
 
+#remove subset if required
+log_verbose(' Using features from position: ' + str(results.start) + ' to position ' + str(results.end))
+all_X.drop(all_X.iloc[:, int(results.end)+1:], inplace = True, axis = 1)
+all_X.drop(all_X.iloc[:, 0:int(results.start)], inplace = True, axis = 1)
 
 #create a dataframe with only the target column
 all_y = all_df[['shape']]
@@ -158,6 +153,8 @@ ordinal_y = encoder.transform(all_y.values.ravel())
 # get one hot encoding
 one_hot_y = np_utils.to_categorical(ordinal_y)
 
+#save classes to the file
+common.save_encoder(encoder)
 
 #split into test and train
 X_train, X_test_base, y_train, y_test, one_hot_y_train, one_hot_y_test, ordinal_y_train, ordinal_y_test = train_test_split(all_X, all_y, one_hot_y, ordinal_y, test_size=0.2) # 80% training and 20% test
@@ -169,6 +166,8 @@ scaler.fit(X_train)
 X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test_base)
 all_X = scaler.transform(all_X)
+#save the scaler
+common.save_scaler(scaler)
 
 # Check if PCA should be done
 if results.pca:
@@ -177,6 +176,7 @@ if results.pca:
         pca_parameter = int(pca_parameter);
     pca = PCA(pca_parameter)
     pca.fit(X_train)
+    common.save_pca(pca)
     log_verbose("\nPCA reduction:")
     log_verbose(" Number of selected components: ", pca.n_components_)
     log_verbose(" Explained variance: {0:.0%}".format(pca.explained_variance_ratio_.sum()))
@@ -187,10 +187,6 @@ if results.pca:
         all_X = pca.transform(all_X)
 
 
-#Prepare classifiers
-names = ["Nearest Neighbors", 
-         "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
-         "Naive Bayes", "QDA"]
 # Random forest
 parameters = {'n_estimators': 220,
               'random_state': 0}
@@ -198,7 +194,7 @@ parameters = {'n_estimators': 220,
 
 # define the keras model for Neural Network
 #get number of columns and categories in training data
-train_cols = all_X.shape[1]
+train_cols = X_train.shape[1]
 no_categories = one_hot_y.shape[1]
 
 def baseline_model(train_cols, no_categories):
@@ -289,13 +285,15 @@ for name, clf in classifiers:
 one_hot_encoded = ['NeuralNet']
 
 accuracy = {}
+class_probability_names = []
+for class_name in encoder.classes_:
+    class_probability_names.append(class_name + '_prob')
 
 for name, clf in classifiers:
     log_verbose("\nEvaluating: ", name)
     train_start_time = datetime.now()
     fig, ax = plt.subplots()
     if name in one_hot_encoded:
-
         clf.fit(X_train, one_hot_y_train)
         y_pred = encoder.inverse_transform(clf.predict(X_test))
         accuracy[name] = metrics.accuracy_score(y_test, y_pred)
@@ -303,26 +301,29 @@ for name, clf in classifiers:
         df_cfm = pd.DataFrame(c_m, index=encoder.classes_ , columns=encoder.classes_ )
         plt.figure(figsize=(10, 7))
         cfm_plot = sn.heatmap(df_cfm, annot=True, fmt='d')
-        plt.savefig(output_file(name + ".png"))
+        plt.savefig(common.model_file(name + ".png"))
         plt.close(fig)
+        #clf.save(output_file(name + ".joblib")) does not work not NN
     else:
         cm = ConfusionMatrix(clf, encoder=encoder, is_fitted=False, ax=ax)
         cm.fit(X_train, ordinal_y_train)
         accuracy[name] = cm.score(X_test, ordinal_y_test)
         cm.finalize()
-        plt.savefig(output_file(name + ".png"))
+        plt.savefig(common.model_file(name + ".png"))
         plt.close(fig)
+        dump(clf, common.model_file(name + ".joblib"))
 
-    dump(clf, output_file(name + ".joblib"))
     train_end_time = datetime.now()
-    #y_pred[name] = encoder.inverse_transform(clf.predict(X_test))
-    #accuracy[name] = metrics.accuracy_score(y_test, y_pred[name])
+
     if results.extended:
-        all_df[name] = encoder.inverse_transform(clf.predict(all_X))
+        all_df = common.append_predictions(clf, all_X, name, all_df)
+
+
     print('', name, "accuracy:", "{0:.0%}".format(accuracy[name]))
     eval_end_time = datetime.now()
     log_verbose(' Training time: {}'.format(train_end_time - train_start_time))
     log_verbose(' Evaluation time: {}\n'.format(eval_end_time - train_end_time))
+
 
 # save the results file if required
 if results.extended:
@@ -330,7 +331,7 @@ if results.extended:
         all_df.loc[i, 'test_set'] = "yes"
     #save the results file
     log_verbose('Saving predictions')
-    all_df.to_csv(output_file("predictions.csv"))
+    all_df.to_csv(common.model_file("predictions.csv"))
 
 end_time = datetime.now()
 log_verbose('Total execution time: {}'.format(end_time - start_time))
@@ -350,8 +351,8 @@ if results.upload:
 
 
     def zip_it(in_file, out_file):
-        inpath = output_file(in_file)
-        outpath = output_file(out_file)
+        inpath = common.model_file(in_file)
+        outpath = common.model_file(out_file)
         with zipfile.ZipFile(outpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.write(inpath, os.path.basename(inpath))
         #unix style required by naptune
@@ -362,18 +363,17 @@ if results.upload:
         log_verbose('Uploading data for: ', name)
         neptune.log_metric(name, accuracy[name])
         # Load image
-        image = Image.open(output_file(name+".png"))
+        image = Image.open(common.model_file(name+".png"))
         neptune.log_image('Confusion matrices', image, image_name=name, description='Confusion matrix for '+name)
 
-        #if os.getenv('CI') == "true" and is_classifier(clf):
-        #    if name in one_hot_encoded:
-        #        log_confusion_matrix_chart(clf, X_train, X_test, one_hot_y_train, one_hot_y_test)  # log confusion matrix chart
-        #        log_precision_recall_chart(clf, X_test, y_test)
-        #    else:
-        #        log_confusion_matrix_chart(clf, X_train, X_test, ordinal_y_train, ordinal_y_test)  # log confusion matrix chart
-        #        log_precision_recall_chart(clf, X_test, y_test)
-        neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
+        #can't save NN at the moment
+        if name not in one_hot_encoded:
+            neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
+        neptune.log_artifact(common.model_file(common.scaler_file).as_posix())
+        neptune.log_artifact(common.model_file(common.class_name_file).as_posix())
+        if results.pca:
+            neptune.log_artifact(common.model_file(common.pca_file).as_posix())
 
     # if requested zip and add extended results
     if results.extended:

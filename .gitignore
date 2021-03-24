@@ -127,8 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-*.h5
-predictions.csv
-predictions.zip
-pca.csv
+
 output
+models
