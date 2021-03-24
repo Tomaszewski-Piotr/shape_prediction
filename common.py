@@ -57,6 +57,8 @@ def check_apply_pca(data):
         log_verbose('Applying pca')
         pca = load(model_file(pca_file))
         return pca.transform(data)
+    else:
+        return data
 
 def save_pca(pca):
     dump(pca, model_file(pca_file), compress=True)
