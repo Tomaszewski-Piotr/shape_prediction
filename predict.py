@@ -80,7 +80,7 @@ X_predict = common.apply_scaler(shapes_df)
 X_predict = common.check_apply_pca(X_predict)
 
 # perform all defined predictions
-for model_full_file in pathlib.Path(common.model_dir).glob('*' + common.model_suffix):
+for model_full_file in pathlib.Path(common.model_directory()).glob('*' + common.model_suffix):
     model_file = os.path.basename(model_full_file)
     model_name = model_file[:-len(common.model_suffix)]
     log_verbose(' Retrieving prediction model based on ' + model_name + ' from file: ' + str(model_full_file))
@@ -88,7 +88,7 @@ for model_full_file in pathlib.Path(common.model_dir).glob('*' + common.model_su
         print(model_name + ' currently not supported' )
     else:
         clf = load(model_full_file)
-        common.append_predictions(clf, X_predict, model_name, input_df)
+        input_df = common.append_predictions(clf, X_predict, model_name, input_df)
 
 
 input_df.to_csv(results.output)
