@@ -1,0 +1,7 @@
+# This file is used for creating docker image with prediction service
+scikit-learn
+tensorflow
+keras
+numpy
+xgboost
+pandas

@@ -1,11 +1,12 @@
-name: Pull request actions
+name: Deploy new shape classification service upon merge to master
 
 on:
-  pull_request:
-    branches: [master]
+  push:
+    branches:
+      - master
 
 jobs:
-  compare-experiments:
+  deploy-image:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -21,11 +22,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}         
   
-      - name: Checkout pull request branch
-        uses: actions/checkout@v2        
+      - name: Checkout main branch
+        uses: actions/checkout@v2
+        with:
+          ref: master
 
-      - name: Setup pull request branch environment and run experiment
-        id: experiment_pr
+      - name: Setup main branch environment and run experiment to get reference and model file
+        id: experiment_main
         run: |
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
@@ -33,10 +36,18 @@ jobs:
           text=$(cat log.txt | grep -v Evaluating)
           echo ::set-output name=url::$text
 
-
+      - name: Push to Docker Hub
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: piotrtomaszewski/shape_prediction
+          tags: latest
       - name: Create a comment
         uses: peter-evans/commit-comment@v1
         with:
           body: |
-            ${{ steps.experiment_pr.outputs.url }}
+            ${{ steps.experiment_main.outputs.url }}
+            ${{ steps.docker_build.outputs.digest }}
           

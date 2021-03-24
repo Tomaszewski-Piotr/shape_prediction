@@ -7,3 +7,4 @@ numpy
 xgboost
 neptune-client
 neptune-contrib[monitoring]
+pandas
