@@ -370,10 +370,10 @@ if results.upload:
         if name not in one_hot_encoded:
             neptune.log_artifact(zip_it(name + ".joblib", name + ".zip"))
 
-        neptune.log_artifact(common.scaler_file.as_posix())
-        neptune.log_artifact(common.class_name_file.as_posix())
+        neptune.log_artifact(common.model_file(common.scaler_file).as_posix())
+        neptune.log_artifact(common.model_file(common.class_name_file).as_posix())
         if results.pca:
-            neptune.log_artifact(common.pca_file.as_posix())
+            neptune.log_artifact(common.model_file(common.pca_file).as_posix())
 
     # if requested zip and add extended results
     if results.extended:
