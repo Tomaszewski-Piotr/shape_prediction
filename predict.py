@@ -38,6 +38,7 @@ from common import model_file
 
 
 parser = argparse.ArgumentParser(description='Shape prediction')
+parser.add_argument('--tag', action='store', dest='tag', help='Identifier for trained model. If not specified the default will be used')
 parser.add_argument('--input',  action='store', dest='input', required=True,
                     help='Input file with shapes')
 parser.add_argument('--output',  action='store', dest='output', required=True,
@@ -48,9 +49,10 @@ parser.add_argument('--verbose', '-v', action='store_true', default=False,
 
 results = parser.parse_args()
 
-#set common lib to verbose mode
+# pass relevant settings to the common lib
 common.verbose = results.verbose
-
+if results.tag:
+    common.tag = results.tag
 
 if os.path.isdir(common.model_dir):
     log_verbose('\nModels will be retrieved from :', common.model_dir )

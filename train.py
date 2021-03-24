@@ -81,6 +81,7 @@ parser.add_argument('--from', action='store', dest='start', default=0,
                     help='specify subset of features to be used for training, start point <0,499>')
 parser.add_argument('--to', action='store', dest='end', default=499,
                     help='specify subset of features to be used for training, end point <0,499>')
+parser.add_argument('--tag', action='store', dest='tag', help='Identifier for trained model. If not specified the default will be replaced')
 group = parser.add_mutually_exclusive_group()
 for item in predefined_switches:
     group.add_argument(item[0], item[1], action='store_true', dest=item[2], help=item[3])
@@ -94,19 +95,26 @@ parser.add_argument('--stacked', '-s', action='store_true', default=False,
                     help='Additionally run selected classifiers stacked')
 results = parser.parse_args()
 
+# pass relevant settings to the common lib
 common.verbose = results.verbose
+if results.tag:
+    common.tag = results.tag
 
 # Just disables the warning, doesn't enable AVX/FMA
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 #prepare output directory
-output_dir = common.model_dir
+output_dir = common.model_directory()
 log_verbose('\nResults will be placed in: ', output_dir)
 
 if os.path.isdir(output_dir):
     log_verbose('\nCleaning output directory')
     shutil.rmtree(output_dir)
-os.mkdir(output_dir);
+
+if not os.path.isdir(common.model_dir):
+    os.mkdir(common.model_dir)
+
+os.mkdir(output_dir)
 
 # concat contents off all data files
 log_verbose('\nPreparing data')

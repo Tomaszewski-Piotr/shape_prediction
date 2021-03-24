@@ -10,6 +10,8 @@ import numpy as np
 #default to no verbose, change if needed
 verbose = False
 
+tag = 'default'
+
 #list of classifiers where one hot encoding is required
 one_hot_encoded = ['NeuralNet']
 
@@ -19,12 +21,16 @@ model_suffix = '.joblib'
 data_path = 'data'
 data_suffix = '_Iq.csv'
 
-def model_file(filename):
-    return pathlib.Path(model_dir, filename)
+# path to current model directory
+def model_directory():
+    return pathlib.Path(model_dir, tag)
 
-scaler_file = model_file('std_scaler.bin')
-pca_file = model_file('pca.bin')
-class_name_file = model_file('classes.npy')
+def model_file(filename):
+    return pathlib.Path(model_directory(), filename)
+
+scaler_file = 'std_scaler.bin'
+pca_file = 'pca.bin'
+class_name_file = 'classes.npy'
 
 
 
@@ -39,34 +45,34 @@ def preprocess_input_file(filename):
 
 
 def apply_scaler(data):
-    scaler = load(scaler_file)
+    scaler = load(model_file(scaler_file))
     return scaler.transform(data)
 
 def save_scaler(scaler):
-    dump(scaler, scaler_file, compress=True)
+    dump(scaler, model_file(scaler_file), compress=True)
 
 
 def check_apply_pca(data):
-    if os.path.isfile(pca_file):
+    if os.path.isfile(model_file(pca_file)):
         log_verbose('Applying pca')
-        pca = load(pca_file)
+        pca = load(model_file(pca_file))
         return pca.transform(data)
 
 def save_pca(pca):
-    dump(pca, pca_file, compress=True)
+    dump(pca, model_file(pca_file), compress=True)
 
 
 
 def retrieve_class_names():
     encoder = LabelEncoder()
-    encoder.classes_ = np.load(class_name_file, allow_pickle=True)
+    encoder.classes_ = np.load(model_file(class_name_file), allow_pickle=True)
     class_probability_names = []
     for class_name in encoder.classes_:
         class_probability_names.append(class_name + '_prob')
     return encoder, class_probability_names
 
 def save_encoder(encoder):
-    np.save(class_name_file, encoder.classes_)
+    np.save(model_file(class_name_file), encoder.classes_)
 
 
 def append_predictions(clf, data, model_name, output_df):
