@@ -52,8 +52,7 @@ jobs:
         with:
           context: .
           push: true
-          repository: piotrtomaszewski/shape_prediction
-          tags: latest
+          tags: piotrtomaszewski/shape_prediction:latest
       - name: Create a comment
         uses: peter-evans/commit-comment@v1
         with:
