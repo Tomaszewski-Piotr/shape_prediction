@@ -1,6 +1,6 @@
 Shape prediction
 
-This is a shape prediction project. _Shun please provide info on what we are actually predicting_
+This is a shape prediction project that classifies the shape of nanoobject based on the intensity variation.
 
 **Usage**
 1. Clone train and run the code
