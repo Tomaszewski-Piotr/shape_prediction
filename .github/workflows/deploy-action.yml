@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches: [ master ]
 
 jobs:
   deploy-image:
@@ -32,7 +30,7 @@ jobs:
         run: |
           pip3 install -r requirements.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python train.py --rfc -v --upload > log.txt
+          python train.py --rfc --upload > log.txt
           text=$(cat log.txt | grep -v Evaluating)
           echo ::set-output name=url::$text
 
