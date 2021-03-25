@@ -5,9 +5,10 @@ FROM python:3.7-slim
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-ADD *.py /app
-COPY models /app/models
-ADD requirements_deploy.txt /app
+ADD *.py /app/
+ADD models/ /app/models/
+RUN ls -la /app/models/*
+ADD requirements_deploy.txt /app/
 
 # Install any needed packages specified in requirements_deploy.txt
 RUN pip install -r requirements_deploy.txt
