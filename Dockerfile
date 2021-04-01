@@ -11,7 +11,7 @@ RUN ls -la /app/models/*
 ADD requirements_deploy.txt /app/
 
 # Install any needed packages specified in requirements_deploy.txt
-RUN pip install -r requirements_deploy.txt
+RUN pip install --no-cache-dir --compile  -r requirements_deploy.txt
 
 # Run predict.py when the container launches
 ENTRYPOINT  ["python", "/app/predict.py"]
