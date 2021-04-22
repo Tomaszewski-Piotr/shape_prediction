@@ -43,7 +43,7 @@ if file is not None:
     def to_excel(df):
         output = BytesIO()
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        df.to_excel(writer, index=True, sheet_name='Results', float_format="%.2f")
+        df.to_excel(writer, index=False, sheet_name='Results', float_format="%.2f")
         writer.save()
         processed_data = output.getvalue()
         return processed_data
