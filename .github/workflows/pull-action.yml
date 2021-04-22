@@ -33,11 +33,12 @@ jobs:
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
           python train.py --rfc --upload > log.txt
           text=$(cat log.txt | grep -v Evaluating)
-          git status
+          rm models/default/*.zip
           echo ::set-output name=url::$text
-
-
-
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v7
+        with:
+          message: ${{ steps.experiment_pr.outputs.url }}
       - name: Create a comment
         uses: peter-evans/commit-comment@v1
         with:
