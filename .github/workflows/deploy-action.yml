@@ -25,15 +25,6 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v2
 
-      - name: Setup main branch environment and run experiment to get reference and model file
-        id: experiment_main
-        run: |
-          pip3 install -r requirements.txt
-          export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
-          python train.py --rfc --upload > log.txt
-          text=$(cat log.txt | grep -v Evaluating)
-          echo ::set-output name=url::$text
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -55,6 +46,5 @@ jobs:
         uses: peter-evans/commit-comment@v1
         with:
           body: |
-            ${{ steps.experiment_main.outputs.url }}
             ${{ steps.docker_build.outputs.digest }}
           
