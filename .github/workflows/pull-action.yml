@@ -33,6 +33,7 @@ jobs:
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
           python train.py --rfc --upload > log.txt
           text=$(cat log.txt | grep -v Evaluating)
+          git status
           echo ::set-output name=url::$text
 
 
