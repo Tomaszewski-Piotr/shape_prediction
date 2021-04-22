@@ -3,6 +3,8 @@ name: Pull request actions
 on:
   pull_request:
     branches: [master]
+    paths-ignore:
+      - 'models/**'
 
 jobs:
   compare-experiments:
@@ -27,11 +29,12 @@ jobs:
       - name: Setup pull request branch environment and run experiment
         id: experiment_pr
         run: |
-          pip3 install -r requirements.txt
+          pip3 install -r requirements_build.txt
           export NEPTUNE_EXPERIMENT_TAG_ID=$(uuidgen)
           python train.py --rfc --upload > log.txt
           text=$(cat log.txt | grep -v Evaluating)
           echo ::set-output name=url::$text
+
 
 
       - name: Create a comment

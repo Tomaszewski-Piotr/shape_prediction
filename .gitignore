@@ -129,4 +129,5 @@ dmypy.json
 .pyre/
 
 output
-models
+models/*
+!models/default
