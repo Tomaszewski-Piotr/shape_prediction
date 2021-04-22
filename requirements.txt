@@ -5,6 +5,6 @@ tensorflow
 keras
 numpy
 xgboost
-neptune-client
-neptune-contrib[monitoring]
+streamlit
 pandas
+xlsxwriter

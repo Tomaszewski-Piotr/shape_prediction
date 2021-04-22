@@ -1,0 +1,10 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+scikit-learn
+tensorflow
+keras
+numpy
+xgboost
+neptune-client
+neptune-contrib[monitoring]
+pandas
