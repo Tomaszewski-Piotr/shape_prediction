@@ -12,6 +12,8 @@ There is a build-in help functionality.
 
 ***Training***
 
+The app comes pre-trained on the included data. Training is only needed if new data is added.
+
 The app responsible for training is _train.py_.
 
 The data for training is provided in the cvs format and is stored in the data directory. Training data for a given shape is provided in a file with a name corresponding to that shape. In order to add the capability of recognizing a new shape, just add a properly named file with shape examples, the system will recognize this as a new shape.
@@ -32,7 +34,7 @@ There are 3 ways to access the prediction models:
 
 The command line access is provided by _predict.py_. All available models are accessible this way. Please consult help (_python predict.py--help_) to find out the usage syntax.
 
-The web interface is based on the Streamlit integration and requires streamlit. To access it locally please run '_streamlit run onlineprediction.py_'
+The web interface is based on the Streamlit integration and requires streamlit. To access it locally please run '_streamlit run onlinepredict.py_'
 
 **Notes**
 
